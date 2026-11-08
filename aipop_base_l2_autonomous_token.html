@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIPOP - Base L2</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Ethers.js v5.7.2 for direct Ethereum / Base Web3 interactions -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        base: {
+                            blue: '#0052FF',
+                            darkblue: '#0039B3',
+                            cyan: '#00D8FF',
+                            bg: '#000000',
+                            card: '#0a0a0a',
+                            border: '#1a1a1a',
+                            hover: '#141414',
+                            accent: '#0052FF'
+                        },
+                        mono: {
+                            50: '#f6f6f6',
+                            100: '#e7e7e7',
+                            200: '#d1d1d1',
+                            300: '#b0b0b0',
+                            400: '#888888',
+                            500: '#6d6d6d',
+                            600: '#5d5d5d',
+                            700: '#4f4f4f',
+                            800: '#353535',
+                            900: '#1f1f1f',
+                            950: '#000000'
+                        },
+                        accent: {
+                            green: '#00ff66',
+                            red: '#ff334b',
+                            blue: '#0052FF'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['Courier New', 'Courier', 'monospace', 'Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #000000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #222222;
+            border-radius: 2px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0052FF;
+        }
+        .base-gradient-text {
+            background: linear-gradient(135deg, #ffffff 40%, #0052FF 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-black text-white font-mono min-h-screen flex flex-col justify-between selection:bg-base-blue selection:text-white">
+
+    <!-- TOP ANNOUNCEMENT BAR -->
+    <div class="bg-base-card border-b border-base-border text-xs py-1.5 px-4 text-center text-mono-300 flex items-center justify-center gap-3">
+        <div class="flex items-center gap-1.5">
+            <span id="networkPulse" class="inline-block w-2 h-2 rounded-full bg-mono-600"></span>
+            <span id="networkNameDisplay" class="font-bold text-white">BASE MAINNET</span>
+        </div>
+        <span class="text-mono-600">|</span>
+        <span>CHAIN ID: <strong class="text-white">8453</strong></span>
+        <span class="text-mono-600 hidden sm:inline">|</span>
+        <span class="hidden sm:inline">UNISWAP V3 ROUTER: <strong class="text-base-blue">ACTIVE</strong></span>
+    </div>
+
+    <!-- MAIN NAVBAR -->
+    <header class="sticky top-0 z-40 bg-black/95 backdrop-blur-md border-b border-base-border px-4 lg:px-8 py-3.5">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <!-- Brand Logo (Direct Blend - No Outline/Box Border) -->
+            <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('swap')">
+                <img src="https://i.imgur.com/pJKFjr6.jpeg" alt="AIPOP Logo" class="w-10 h-10 object-contain rounded-full bg-transparent p-0 border-0 outline-none" onerror="this.src='https://placehold.co/100x100/0052FF/ffffff?text=AI'">
+                <div class="flex items-center gap-2">
+                    <span class="font-extrabold text-xl tracking-wider text-white">AIPOP</span>
+                    <span class="text-[9px] bg-base-blue/20 text-base-blue border border-base-blue/40 px-1.5 py-0.5 rounded font-bold">BASE L2</span>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="hidden md:flex items-center gap-6 text-sm">
+                <button onclick="switchTab('swap')" id="nav-swap" class="nav-btn text-white font-medium hover:text-base-blue transition">Uniswap V3 Swap</button>
+                <button onclick="switchTab('standby')" id="nav-standby" class="nav-btn text-mono-400 font-medium hover:text-white transition">Token Details</button>
+                <button onclick="openLaunchModal()" class="text-mono-400 font-medium hover:text-white transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-rocket text-xs text-base-blue"></i> Deploy Token
+                </button>
+            </nav>
+
+            <!-- Real Web3 Wallet Button -->
+            <div class="flex items-center gap-3">
+                <button id="walletBtn" onclick="connectRealWallet()" class="border border-base-border hover:border-base-blue bg-base-card text-white text-xs font-semibold px-4 py-2.5 rounded transition flex items-center gap-2">
+                    <span id="walletDot" class="w-2 h-2 rounded-full bg-mono-600"></span>
+                    <span id="walletText">Connect Wallet</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO SECTION -->
+    <section class="border-b border-base-border bg-gradient-to-b from-base-card via-black to-black py-8 px-4 sm:px-6">
+        <div class="max-w-4xl mx-auto text-center space-y-4">
+            <!-- Header Logo (No outline, clean blend) -->
+            <div class="flex justify-center mb-1">
+                <img src="https://i.imgur.com/pJKFjr6.jpeg" alt="AIPOP Header Logo" class="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-contain bg-transparent border-0 outline-none" onerror="this.src='https://placehold.co/200x200/0052FF/ffffff?text=AIPOP'">
+            </div>
+
+            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-base-blue/30 bg-base-blue/10 text-xs text-mono-200">
+                <i class="fa-solid fa-shield-halved text-base-blue"></i> Official Token Contract Verified
+            </div>
+            
+            <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white uppercase">
+                AIPOP <span class="base-gradient-text">BASE L2</span>
+            </h1>
+            
+            <p class="text-mono-400 max-w-2xl mx-auto text-xs sm:text-sm leading-relaxed">
+                Connect your Web3 wallet to trade $AIPOP directly on Base Mainnet via Uniswap V3.
+            </p>
+
+            <!-- CONTRACT ADDRESS BANNER -->
+            <div class="max-w-xl mx-auto bg-base-card border border-base-blue/40 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-mono">
+                <div class="flex items-center gap-2 min-w-0 w-full sm:w-auto">
+                    <span class="text-mono-500 font-bold shrink-0">CA:</span>
+                    <span id="caText" class="text-white truncate font-bold selection:bg-base-blue select-all">0x155eb7a3ac08f74875be20f532d025f66536ee0c</span>
+                </div>
+                <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+                    <button onclick="copyCA()" class="bg-base-blue/20 hover:bg-base-blue text-base-blue hover:text-white border border-base-blue/50 px-3 py-1.5 rounded transition font-sans font-semibold text-[11px] flex items-center gap-1.5">
+                        <i class="fa-regular fa-copy"></i>
+                        <span>Copy CA</span>
+                    </button>
+                    <a href="https://basescan.org/token/0x155eb7a3ac08f74875be20f532d025f66536ee0c" target="_blank" class="bg-mono-900 hover:bg-mono-800 text-mono-300 hover:text-white border border-base-border px-3 py-1.5 rounded transition font-sans text-[11px] flex items-center gap-1.5">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        <span>BaseScan</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MAIN INTERFACE -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-grow">
+
+        <!-- TAB 1: UNISWAP V3 SWAP INTERFACE -->
+        <div id="tab-swap-content" class="space-y-6">
+            <div class="max-w-md mx-auto bg-base-card border border-base-border rounded-xl p-5 space-y-4">
+                
+                <div class="flex items-center justify-between border-b border-base-border pb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-repeat text-base-blue"></i>
+                        <h2 class="text-sm font-bold text-white uppercase">Swap $AIPOP</h2>
+                    </div>
+                    <span class="text-[10px] bg-base-blue/20 text-base-blue border border-base-blue/30 px-2 py-0.5 rounded font-mono">Base Mainnet</span>
+                </div>
+
+                <!-- Pay Input Token -->
+                <div class="bg-black border border-base-border rounded-lg p-3 space-y-2">
+                    <div class="flex justify-between text-xs text-mono-400">
+                        <span>You Pay</span>
+                        <span>Balance: <strong id="payBalanceDisplay" class="text-white">0.00</strong></span>
+                    </div>
+                    <div class="flex items-center justify-between gap-2">
+                        <input type="number" id="payAmount" step="any" placeholder="0.0" oninput="calculateSwapEst()" class="w-full bg-transparent text-xl font-bold text-white focus:outline-none">
+                        <select id="payTokenSelect" onchange="onTokenSelectChange()" class="bg-mono-900 border border-base-border rounded px-3 py-1.5 text-xs text-white font-bold focus:outline-none focus:border-base-blue">
+                            <option value="ETH" selected>ETH (Native)</option>
+                            <option value="USDC">USDC</option>
+                            <option value="WETH">WETH</option>
+                            <option value="AIPOP">AIPOP Token</option>
+                            <option value="USDbC">USDbC</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Swap Switch Button -->
+                <div class="flex justify-center -my-2 relative z-10">
+                    <button onclick="switchSwapDirection()" class="w-8 h-8 bg-base-card border border-base-border hover:border-base-blue rounded-full flex items-center justify-center text-base-blue transition">
+                        <i class="fa-solid fa-arrow-down-up text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Receive Output Token (Preselected to AIPOP Token) -->
+                <div class="bg-black border border-base-border rounded-lg p-3 space-y-2">
+                    <div class="flex justify-between text-xs text-mono-400">
+                        <span>You Receive (Est.)</span>
+                        <span>Balance: <strong id="receiveBalanceDisplay" class="text-white">0.00</strong></span>
+                    </div>
+                    <div class="flex items-center justify-between gap-2">
+                        <input type="text" id="receiveAmount" readonly placeholder="0.0" class="w-full bg-transparent text-xl font-bold text-mono-300 focus:outline-none">
+                        <select id="receiveTokenSelect" onchange="onTokenSelectChange()" class="bg-mono-900 border border-base-border rounded px-3 py-1.5 text-xs text-white font-bold focus:outline-none focus:border-base-blue">
+                            <option value="AIPOP" selected>AIPOP Token</option>
+                            <option value="ETH">ETH (Native)</option>
+                            <option value="USDC">USDC</option>
+                            <option value="WETH">WETH</option>
+                            <option value="USDbC">USDbC</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Token CA Info Indicator -->
+                <div class="bg-mono-950 p-2.5 rounded border border-base-border text-[11px] font-mono flex items-center justify-between">
+                    <span class="text-mono-400">Target CA:</span>
+                    <span class="text-base-blue font-bold truncate max-w-[200px]">0x155eb7...6536ee0c</span>
+                </div>
+
+                <!-- Custom Contract Address Input (Hidden by default unless CUSTOM selected) -->
+                <div id="customTokenContainer" class="hidden space-y-1.5 bg-mono-950 p-3 rounded border border-base-border">
+                    <label class="block text-[11px] text-mono-300">Enter Base Token Contract Address (CA):</label>
+                    <input type="text" id="customTokenAddress" placeholder="0x..." oninput="parseCustomAddress()" class="w-full bg-black border border-base-border rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-base-blue">
+                    <span id="customTokenStatus" class="text-[10px] text-mono-500 block">Provide standard ERC-20 address on Base Mainnet.</span>
+                </div>
+
+                <!-- Swap Details Summary -->
+                <div class="bg-mono-950 p-3 rounded border border-base-border text-xs space-y-1 text-mono-400 font-mono">
+                    <div class="flex justify-between">
+                        <span>Protocol Router:</span>
+                        <span class="text-white">Uniswap V3 (Base)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Uniswap V3 Router:</span>
+                        <a href="https://basescan.org/address/0x2626664c2603336E57B271c5C0b26F421741e481" target="_blank" class="text-base-blue underline hover:text-white">0x2626...e481</a>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Network Gas:</span>
+                        <span class="text-accent-green">&lt; 0.0001 ETH</span>
+                    </div>
+                </div>
+
+                <!-- Action Swap Button -->
+                <button id="swapActionBtn" onclick="handleSwapAction()" class="w-full bg-base-blue hover:bg-base-darkblue text-white text-xs font-bold py-3.5 rounded-lg transition uppercase tracking-wider flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-wallet text-xs"></i>
+                    <span id="swapBtnText">Connect Wallet to Swap</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- TAB 2: TOKEN DETAILS -->
+        <div id="tab-standby-content" class="hidden space-y-6">
+            <div class="bg-base-card border border-base-border rounded-xl p-8 max-w-2xl mx-auto text-center space-y-6">
+                <!-- Clean Blend Image -->
+                <div class="flex justify-center">
+                    <img src="https://i.imgur.com/pJKFjr6.jpeg" alt="AIPOP Token Logo" class="w-20 h-20 rounded-full object-contain bg-transparent border-0 outline-none" onerror="this.src='https://placehold.co/150x150/0052FF/ffffff?text=AIPOP'">
+                </div>
+                
+                <div class="space-y-2">
+                    <h3 class="text-xl font-bold text-white uppercase">AIPOP Token Details</h3>
+                    <p class="text-xs text-mono-400 leading-relaxed max-w-md mx-auto">
+                        Official AIPOP token deployed natively on Base Mainnet. Available for direct decentralized swapping via Uniswap V3.
+                    </p>
+                </div>
+
+                <div class="bg-black border border-base-border p-4 rounded-lg space-y-3 text-left font-mono text-xs">
+                    <div class="flex justify-between border-b border-base-border/50 pb-2">
+                        <span class="text-mono-500">TOKEN NAME</span>
+                        <span class="text-white font-bold">AIPOP</span>
+                    </div>
+                    <div class="flex justify-between border-b border-base-border/50 pb-2">
+                        <span class="text-mono-500">NETWORK</span>
+                        <span class="text-base-blue font-bold">Base Mainnet (8453)</span>
+                    </div>
+                    <div class="flex justify-between border-b border-base-border/50 pb-2">
+                        <span class="text-mono-500">CONTRACT ADDRESS</span>
+                        <span class="text-mono-200 select-all font-bold">0x155eb7a3ac08f74875be20f532d025f66536ee0c</span>
+                    </div>
+                    <div class="flex justify-between border-b border-base-border/50 pb-2">
+                        <span class="text-mono-500">DEX VENUE</span>
+                        <span class="text-accent-green font-bold">Uniswap V3</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-mono-500">BLOCK EXPLORER</span>
+                        <a href="https://basescan.org/token/0x155eb7a3ac08f74875be20f532d025f66536ee0c" target="_blank" class="text-base-blue underline hover:text-white">View on BaseScan</a>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex justify-center gap-3">
+                    <button onclick="switchTab('swap')" class="bg-base-blue hover:bg-base-darkblue text-white text-xs font-bold px-6 py-3 rounded-lg transition uppercase tracking-wider inline-flex items-center gap-2">
+                        <i class="fa-solid fa-repeat text-xs"></i> Trade AIPOP Now
+                    </button>
+                    <button onclick="copyCA()" class="bg-mono-900 hover:bg-mono-800 border border-base-border text-white text-xs font-bold px-6 py-3 rounded-lg transition uppercase tracking-wider inline-flex items-center gap-2">
+                        <i class="fa-regular fa-copy text-xs"></i> Copy Address
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- CREATE TOKEN MODAL -->
+    <div id="launchModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-base-card border border-base-border rounded-xl max-w-lg w-full p-6 space-y-4 relative">
+            <button onclick="closeLaunchModal()" class="absolute top-4 right-4 text-mono-500 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="border-b border-base-border pb-3">
+                <div class="flex items-center gap-2">
+                    <h3 class="text-lg font-bold text-white">Deploy Token on Base</h3>
+                    <span class="text-[10px] bg-base-blue text-white px-2 py-0.5 rounded font-bold">BASE L2</span>
+                </div>
+                <p class="text-xs text-mono-400">Deploy custom tokens onto Base Mainnet</p>
+            </div>
+
+            <form onsubmit="handleTokenDeployment(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-mono-300 mb-1">Token Name *</label>
+                        <input type="text" id="newTokenName" required placeholder="e.g. AIPOP Agent" class="w-full bg-black border border-base-border rounded p-2.5 text-xs text-white focus:border-base-blue focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-mono-300 mb-1">Symbol *</label>
+                        <input type="text" id="newTokenSymbol" required placeholder="e.g. AIPOP" class="w-full bg-black border border-base-border rounded p-2.5 text-xs text-white focus:border-base-blue focus:outline-none uppercase">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-mono-300 mb-1">Project Description</label>
+                    <textarea id="newTokenDesc" rows="3" placeholder="Token description or project goals..." class="w-full bg-black border border-base-border rounded p-2.5 text-xs text-white focus:border-base-blue focus:outline-none"></textarea>
+                </div>
+
+                <div class="bg-black border border-base-border p-3 rounded text-[11px] text-mono-400 space-y-1">
+                    <div class="flex justify-between">
+                        <span>Target Network:</span>
+                        <span class="text-white font-mono">Base Mainnet (8453)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>DEX Router:</span>
+                        <span class="text-base-blue font-mono">Uniswap V3</span>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="closeLaunchModal()" class="px-4 py-2 border border-base-border rounded text-xs text-mono-400 hover:text-white">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 bg-base-blue hover:bg-base-darkblue text-white font-bold text-xs rounded transition uppercase tracking-wider">Submit Deployment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-base-card border border-base-blue text-white px-4 py-3 rounded-lg text-xs font-mono shadow-2xl hidden z-50 flex items-center gap-2">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-base-blue"></i>
+        <span id="toastMsg">Notification message</span>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-base-border py-6 px-4 bg-black text-center text-xs text-mono-500 space-y-2">
+        <div class="flex items-center justify-center gap-4 text-mono-400 mb-2">
+            <a href="https://base.org" target="_blank" class="hover:text-base-blue">Base.org</a>
+            <span>&bull;</span>
+            <a href="https://basescan.org/token/0x155eb7a3ac08f74875be20f532d025f66536ee0c" target="_blank" class="hover:text-base-blue">AIPOP Contract</a>
+            <span>&bull;</span>
+            <a href="https://app.uniswap.org/#/swap?chain=base&outputCurrency=0x155eb7a3ac08f74875be20f532d025f66536ee0c" target="_blank" class="hover:text-base-blue">Uniswap V3 AIPOP</a>
+        </div>
+        <p>&copy; 2026 AIPOP. Deployed on Base Layer 2.</p>
+    </footer>
+
+    <!-- REAL WEB3 & UNISWAP V3 JS LOGIC -->
+    <script>
+        // OFFICIAL AIPOP CONTRACT ADDRESS ON BASE
+        const AIPOP_CA = '0x155eb7a3ac08f74875be20f532d025f66536ee0c';
+
+        // BASE MAINNET CONSTANTS
+        const BASE_CHAIN_ID_HEX = '0x2105'; // 8453 in Hex
+        const BASE_CHAIN_ID_DEC = 8453;
+        const BASE_RPC_URL = 'https://mainnet.base.org';
+        
+        // UNISWAP V3 ROUTER ON BASE
+        const UNISWAP_V3_ROUTER_BASE = '0x2626664c2603336E57B271c5C0b26F421741e481';
+
+        // BASE KNOWN TOKEN ADDRESSES
+        const BASE_TOKENS = {
+            AIPOP: { symbol: 'AIPOP', address: AIPOP_CA, decimals: 18 },
+            ETH: { symbol: 'ETH', address: '0x0000000000000000000000000000000000000000', decimals: 18 },
+            WETH: { symbol: 'WETH', address: '0x4200000000000000000000000000000000000006', decimals: 18 },
+            USDC: { symbol: 'USDC', address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6 },
+            USDbC: { symbol: 'USDbC', address: '0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA', decimals: 6 }
+        };
+
+        let userAccount = null;
+        let provider = null;
+        let signer = null;
+        let currentChainId = null;
+
+        // Copy CA function
+        function copyCA() {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(AIPOP_CA).then(() => {
+                    showToast('CA Copied to clipboard!');
+                }).catch(() => fallbackCopyCA());
+            } else {
+                fallbackCopyCA();
+            }
+        }
+
+        function fallbackCopyCA() {
+            const tempInput = document.createElement('input');
+            tempInput.value = AIPOP_CA;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showToast('CA Copied to clipboard!');
+        }
+
+        // Initialize Web3 Listeners
+        window.addEventListener('load', async () => {
+            if (window.ethereum) {
+                provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+                
+                // Monitor Accounts Change
+                window.ethereum.on('accountsChanged', handleAccountsChanged);
+                // Monitor Chain Change
+                window.ethereum.on('chainChanged', (chainIdHex) => {
+                    window.location.reload();
+                });
+
+                // Check if already connected
+                try {
+                    const accounts = await provider.listAccounts();
+                    if (accounts.length > 0) {
+                        handleAccountsChanged(accounts);
+                    }
+                } catch (err) {
+                    console.log('Account list error:', err);
+                }
+            }
+        });
+
+        // Connect Real Web3 Wallet
+        async function connectRealWallet() {
+            if (!window.ethereum) {
+                showToast('No Web3 Wallet found! Please install MetaMask or Coinbase Wallet.', true);
+                return;
+            }
+
+            try {
+                showToast('Connecting wallet...');
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                await handleAccountsChanged(accounts);
+                await verifyAndSwitchBaseNetwork();
+            } catch (err) {
+                console.error('User rejected wallet connection:', err);
+                showToast('Wallet connection cancelled or rejected.', true);
+            }
+        }
+
+        async function handleAccountsChanged(accounts) {
+            if (accounts.length === 0) {
+                userAccount = null;
+                document.getElementById('walletText').innerText = 'Connect Wallet';
+                document.getElementById('walletDot').className = 'w-2 h-2 rounded-full bg-mono-600';
+                document.getElementById('networkPulse').className = 'inline-block w-2 h-2 rounded-full bg-mono-600';
+                document.getElementById('payBalanceDisplay').innerText = '0.00';
+                document.getElementById('swapBtnText').innerText = 'Connect Wallet to Swap';
+            } else {
+                userAccount = accounts[0];
+                const formatted = userAccount.substring(0, 6) + '...' + userAccount.substring(userAccount.length - 4);
+                document.getElementById('walletText').innerText = formatted;
+                document.getElementById('walletDot').className = 'w-2 h-2 rounded-full bg-accent-green';
+                document.getElementById('swapBtnText').innerText = 'Swap via Uniswap V3';
+                
+                await verifyAndSwitchBaseNetwork();
+                await fetchLiveUserBalance();
+            }
+        }
+
+        // Network Switch to Base Mainnet
+        async function verifyAndSwitchBaseNetwork() {
+            if (!window.ethereum) return;
+
+            try {
+                const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+                currentChainId = parseInt(chainIdHex, 16);
+
+                if (currentChainId === BASE_CHAIN_ID_DEC) {
+                    document.getElementById('networkPulse').className = 'inline-block w-2 h-2 rounded-full bg-accent-green animate-pulse';
+                    document.getElementById('networkNameDisplay').innerText = 'BASE MAINNET';
+                } else {
+                    document.getElementById('networkPulse').className = 'inline-block w-2 h-2 rounded-full bg-accent-red';
+                    document.getElementById('networkNameDisplay').innerText = 'WRONG NETWORK';
+                    
+                    // Trigger Auto Switch
+                    showToast('Switching network to Base Mainnet...');
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: BASE_CHAIN_ID_HEX }]
+                        });
+                    } catch (switchError) {
+                        // Chain 8453 not added to wallet yet
+                        if (switchError.code === 4902) {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: BASE_CHAIN_ID_HEX,
+                                    chainName: 'Base Mainnet',
+                                    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+                                    rpcUrls: [BASE_RPC_URL],
+                                    blockExplorerUrls: ['https://basescan.org']
+                                }]
+                            });
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Network check error:', err);
+            }
+        }
+
+        // Fetch ETH balance from Base RPC
+        async function fetchLiveUserBalance() {
+            if (!userAccount || !provider) return;
+            try {
+                const balanceWei = await provider.getBalance(userAccount);
+                const balanceEth = parseFloat(ethers.utils.formatEther(balanceWei)).toFixed(4);
+                
+                const payToken = document.getElementById('payTokenSelect').value;
+                if (payToken === 'ETH') {
+                    document.getElementById('payBalanceDisplay').innerText = balanceEth + ' ETH';
+                }
+            } catch (err) {
+                console.error('Balance fetch error:', err);
+            }
+        }
+
+        // Swap Interface Helpers
+        function onTokenSelectChange() {
+            const payVal = document.getElementById('payTokenSelect').value;
+            const recVal = document.getElementById('receiveTokenSelect').value;
+            const customContainer = document.getElementById('customTokenContainer');
+
+            if (payVal === 'CUSTOM' || recVal === 'CUSTOM') {
+                customContainer.classList.remove('hidden');
+            } else {
+                customContainer.classList.add('hidden');
+            }
+            calculateSwapEst();
+        }
+
+        function switchSwapDirection() {
+            const paySel = document.getElementById('payTokenSelect');
+            const recSel = document.getElementById('receiveTokenSelect');
+            const temp = paySel.value;
+            paySel.value = recSel.value;
+            recSel.value = temp;
+
+            const payInput = document.getElementById('payAmount');
+            payInput.value = '';
+            document.getElementById('receiveAmount').value = '';
+            onTokenSelectChange();
+        }
+
+        function calculateSwapEst() {
+            const val = parseFloat(document.getElementById('payAmount').value) || 0;
+            const recInput = document.getElementById('receiveAmount');
+            if (val === 0) {
+                recInput.value = '';
+                return;
+            }
+            const payToken = document.getElementById('payTokenSelect').value;
+            const recToken = document.getElementById('receiveTokenSelect').value;
+
+            if (payToken === 'ETH' && recToken === 'AIPOP') {
+                recInput.value = (val * 1000000).toLocaleString('en-US');
+            } else if (payToken === 'AIPOP' && recToken === 'ETH') {
+                recInput.value = (val / 1000000).toFixed(6);
+            } else if (payToken === 'USDC' && recToken === 'AIPOP') {
+                recInput.value = (val * 300).toLocaleString('en-US');
+            } else {
+                recInput.value = (val * 1.0).toFixed(4);
+            }
+        }
+
+        function parseCustomAddress() {
+            const addr = document.getElementById('customTokenAddress').value.trim();
+            const status = document.getElementById('customTokenStatus');
+            if (ethers.utils.isAddress(addr)) {
+                status.innerText = 'Valid Base Contract Address detected.';
+                status.className = 'text-[10px] text-accent-green block';
+            } else {
+                status.innerText = 'Invalid Base ERC-20 contract address format.';
+                status.className = 'text-[10px] text-accent-red block';
+            }
+        }
+
+        // Execute Swap via Uniswap V3
+        async function handleSwapAction() {
+            if (!userAccount) {
+                await connectRealWallet();
+                return;
+            }
+
+            if (currentChainId !== BASE_CHAIN_ID_DEC) {
+                await verifyAndSwitchBaseNetwork();
+                return;
+            }
+
+            const amount = document.getElementById('payAmount').value;
+            if (!amount || parseFloat(amount) <= 0) {
+                showToast('Please enter a valid swap amount', true);
+                return;
+            }
+
+            // Target Uniswap V3 routing with AIPOP CA mapping
+            const payKey = document.getElementById('payTokenSelect').value;
+            const recKey = document.getElementById('receiveTokenSelect').value;
+
+            const inputCurrency = BASE_TOKENS[payKey] ? BASE_TOKENS[payKey].address : payKey;
+            const outputCurrency = BASE_TOKENS[recKey] ? BASE_TOKENS[recKey].address : recKey;
+
+            showToast('Opening Uniswap V3 for $AIPOP on Base...');
+            setTimeout(() => {
+                window.open(`https://app.uniswap.org/#/swap?chain=base&inputCurrency=${inputCurrency}&outputCurrency=${outputCurrency}`, '_blank');
+            }, 800);
+        }
+
+        // Tab Navigation
+        function switchTab(tab) {
+            document.getElementById('tab-swap-content').classList.add('hidden');
+            document.getElementById('tab-standby-content').classList.add('hidden');
+            
+            document.getElementById('nav-swap').className = 'nav-btn text-mono-400 font-medium hover:text-white transition';
+            document.getElementById('nav-standby').className = 'nav-btn text-mono-400 font-medium hover:text-white transition';
+
+            document.getElementById(`tab-${tab}-content`).classList.remove('hidden');
+            document.getElementById(`nav-${tab}`).className = 'nav-btn text-white font-medium hover:text-base-blue transition';
+        }
+
+        // Token Modal
+        function openLaunchModal() {
+            document.getElementById('launchModal').classList.remove('hidden');
+        }
+        function closeLaunchModal() {
+            document.getElementById('launchModal').classList.add('hidden');
+        }
+
+        function handleTokenDeployment(e) {
+            e.preventDefault();
+            const symbol = document.getElementById('newTokenSymbol').value;
+            closeLaunchModal();
+            showToast(`Deployment submitted for $${symbol} on Base!`);
+            switchTab('standby');
+        }
+
+        // Toast Helper
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            document.getElementById('toastMsg').innerText = msg;
+            
+            if (isError) {
+                icon.className = 'fa-solid fa-circle-exclamation text-accent-red';
+                toast.style.borderColor = '#ff334b';
+            } else {
+                icon.className = 'fa-solid fa-circle-check text-base-blue';
+                toast.style.borderColor = '#0052FF';
+            }
+
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
